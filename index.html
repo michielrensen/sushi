@@ -6,8 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-      /* Lichter roze, meer pastel */
-      --pink-bg: #ffd7e0;
+      --pink-bg: #ffd7e0;        /* lichte pastelroze achtergrond */
       --panel-pink: #ffc7d3;
       --text-dark: #3a2c33;
       --accent-yellow: #f6c75c;
@@ -155,6 +154,8 @@
       100% { opacity: 1; transform: scale(1) translateY(0); }
     }
 
+    /* Conveyor belt (nu weer clean en simpel) */
+
     .belt {
       margin-top: 10px;
       width: 100%;
@@ -181,6 +182,7 @@
       background: #4c5054;
       top: 50%;
       transform: translateY(-50%);
+      z-index: 1;
     }
 
     .right {
@@ -557,13 +559,12 @@
         score += points * level;
         lines += rowCount;
 
-        const previousLevel = level;
         if (lines >= level * 10) {
           level++;
           dropInterval = Math.max(120, dropInterval - 80);
           statusEl.textContent = "Next level! 🍱";
           showLevelUpOverlay(level);
-        } else if (rowCount > 0) {
+        } else {
           statusEl.textContent = "Yummy combo! + " + rowCount + " line(s) 🍣";
         }
 
@@ -784,26 +785,53 @@
       });
     }
 
+    // *** NIEUWE drawNext: echt gecentreerd ***
     function drawNext() {
       nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-      const s = 24;
-      const matrix = nextPiece.matrix;
-      const startX = Math.floor((nextCanvas.width / s - 4) / 2);
-      const startY = 1;
 
-      matrix.forEach((row, y) => {
-        row.forEach((v, x) => {
-          if (v) {
-            drawSushiCell(
-              nextCtx,
-              startX + x,
-              startY + y,
-              nextPiece.type,
-              s
-            );
+      const s = 24;
+      const cells = 4; // 4x4 matrix
+      const m = nextPiece.matrix;
+
+      // Bepaal bounding box van het stuk in de 4x4-matrix
+      let minX = cells, minY = cells, maxX = -1, maxY = -1;
+      for (let y = 0; y < cells; y++) {
+        for (let x = 0; x < cells; x++) {
+          if (m[y][x]) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
           }
-        });
-      });
+        }
+      }
+      if (maxX === -1) return; // safety
+
+      const pieceWidth = (maxX - minX + 1);
+      const pieceHeight = (maxY - minY + 1);
+
+      // Binnen de 4x4 grid: offset zodat het blok binnen die grid gecentreerd staat
+      const offsetGridX = Math.floor((cells - pieceWidth) / 2);
+      const offsetGridY = Math.floor((cells - pieceHeight) / 2);
+
+      // Hele 4x4 grid centreren in het canvas
+      const baseX = (nextCanvas.width - cells * s) / 2;
+      const baseY = (nextCanvas.height - cells * s) / 2;
+
+      nextCtx.save();
+      nextCtx.translate(baseX, baseY);
+
+      // Teken het stuk
+      for (let y = 0; y < cells; y++) {
+        for (let x = 0; x < cells; x++) {
+          if (m[y][x]) {
+            const gx = offsetGridX + (x - minX);
+            const gy = offsetGridY + (y - minY);
+            drawSushiCell(nextCtx, gx, gy, nextPiece.type, s);
+          }
+        }
+      }
+      nextCtx.restore();
     }
 
     function drop() {
